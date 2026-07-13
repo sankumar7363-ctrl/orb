@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Distribution / packaging
+# Packaging
 *.egg-info/
 build/
 dist/
@@ -18,6 +18,6 @@ env/
 .vscode/
 .idea/
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
