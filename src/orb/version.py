@@ -38,8 +38,8 @@ class VersionInfo:
 VERSION = VersionInfo(
     platform_name="ORB Platform",
     short_name="ORB",
-    version="0.1.0",
-    build="0001",
+    version="0.2.0",
+    build="0002",
     release_stage="Alpha",
     release_date="2026-07-05",
     python_requirement="Python 3.12 or later",

@@ -11,6 +11,7 @@ Architecture: ORB Platform
 """
 
 from orb.core.lifecycle import LifecycleManager
+from orb.configuration.manager import Configuration, ConfigurationManager
 
 
 class ORBKernel:
@@ -18,8 +19,10 @@ class ORBKernel:
     Core execution kernel of the ORB Platform.
     """
 
-    def __init__(self):
+    def __init__(self, config_path: str | None = None):
         self.lifecycle = LifecycleManager()
+        self.configuration_manager = ConfigurationManager(config_path)
+        self.configuration: Configuration | None = None
 
     @property
     def state(self) -> str:
@@ -32,6 +35,7 @@ class ORBKernel:
         """
 
         self.lifecycle.initialize()
+        self.configuration = self.configuration_manager.load()
         self.lifecycle.start()
 
     def stop(self):

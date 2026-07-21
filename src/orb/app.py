@@ -19,8 +19,8 @@ class ORBApplication:
     Main ORB application.
     """
 
-    def __init__(self):
-        self.kernel = ORBKernel()
+    def __init__(self, config_path: str | None = None):
+        self.kernel = ORBKernel(config_path)
 
     @property
     def state(self) -> str:
