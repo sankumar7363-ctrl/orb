@@ -12,6 +12,7 @@ Architecture: ORB Platform
 
 from orb.banner import print_banner
 from orb.core.kernel import ORBKernel
+from threading import Event
 
 
 class ORBApplication:
@@ -36,7 +37,18 @@ class ORBApplication:
         print_banner()
         self.kernel.start()
 
-    def stop(self):
+    def run(self) -> None:
+        """Run ORB until the user requests shutdown with Ctrl+C."""
+        self.start()
+        print("ORB is running. Press Ctrl+C to stop.")
+        try:
+            Event().wait()
+        except KeyboardInterrupt:
+            print("\nStopping ORB...")
+        finally:
+            self.stop()
+
+    def stop(self) -> None:
         """
         Stop the ORB Platform.
         """

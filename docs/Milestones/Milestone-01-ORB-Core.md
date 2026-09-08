@@ -122,7 +122,7 @@ Responsibilities:
 
 Status:
 
-Pending
+Delivered in Milestone 02 - Configuration Manager
 
 ---
 
@@ -139,7 +139,7 @@ Responsibilities:
 
 Status:
 
-Pending
+Delivered in Milestone 03 - Logging System
 
 ---
 
@@ -156,7 +156,7 @@ Responsibilities:
 
 Status:
 
-Pending
+Delivered in Milestone 04 - Event Bus
 
 ---
 
@@ -173,7 +173,7 @@ Responsibilities:
 
 Status:
 
-Pending
+Delivered in Milestone 05 - Service Manager
 
 ---
 
@@ -190,7 +190,7 @@ Responsibilities:
 
 Status:
 
-Pending
+Delivered in Milestone 06 - Plugin Manager
 
 ---
 
@@ -395,9 +395,9 @@ Milestone 01
 Current Phase
 
 ```
-Phase 1.1
+Phase 1.7
 
-ORB Application
+Lifecycle Manager
 
 Status:
 

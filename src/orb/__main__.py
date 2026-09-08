@@ -20,7 +20,7 @@ def main() -> None:
     Package entry point.
     """
     app = ORBApplication()
-    app.start()
+    app.run()
 
 
 if __name__ == "__main__":

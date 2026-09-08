@@ -21,3 +21,10 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Runtime logs
+Logs/
+
+# Native-build intermediates
+build/pyinstaller/
+*.spec

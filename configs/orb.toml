@@ -5,3 +5,7 @@ debug = false
 
 [runtime]
 default_timeout = 30
+
+[logging]
+level = "INFO"
+file_name = "orb.log"

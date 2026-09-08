@@ -10,6 +10,8 @@ Architecture: ORB Platform
 =============================================================
 """
 
+import os
+import sys
 from pathlib import Path
 
 # =============================================================
@@ -40,13 +42,21 @@ EXIT_FAILURE = 1
 # DEFAULT DIRECTORIES
 # =============================================================
 
-PROJECT_ROOT = Path.cwd()
+if getattr(sys, "frozen", False):
+    # PyInstaller exposes bundled assets through its temporary/runtime path.
+    PROJECT_ROOT = Path(sys.executable).resolve().parent
+    BUNDLE_DIRECTORY = Path(getattr(sys, "_MEIPASS", PROJECT_ROOT))
+else:
+    PROJECT_ROOT = Path(__file__).resolve().parents[3]
+    BUNDLE_DIRECTORY = PROJECT_ROOT
 
-CONFIG_DIRECTORY = PROJECT_ROOT / "configs"
-LOG_DIRECTORY = PROJECT_ROOT / "Logs"
-DATA_DIRECTORY = PROJECT_ROOT / "Data"
-CACHE_DIRECTORY = PROJECT_ROOT / "Cache"
-MEMORY_DIRECTORY = PROJECT_ROOT / "Memory"
+USER_DATA_DIRECTORY = Path(os.getenv("ORB_HOME", Path.home() / ".orb"))
+
+CONFIG_DIRECTORY = BUNDLE_DIRECTORY / "configs"
+LOG_DIRECTORY = USER_DATA_DIRECTORY / "logs"
+DATA_DIRECTORY = USER_DATA_DIRECTORY / "data"
+CACHE_DIRECTORY = USER_DATA_DIRECTORY / "cache"
+MEMORY_DIRECTORY = USER_DATA_DIRECTORY / "memory"
 
 # =============================================================
 # CONFIGURATION

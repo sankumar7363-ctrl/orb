@@ -43,7 +43,7 @@ VERSION = VersionInfo(
     release_stage="Alpha",
     release_date="2026-07-05",
     python_requirement="Python 3.12 or later",
-    supported_platform="Windows",
+    supported_platform="Windows, macOS, and Linux",
     author="Santosh Kumar",
     license_name="Proprietary",
 )
