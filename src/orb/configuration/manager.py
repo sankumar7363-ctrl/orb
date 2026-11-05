@@ -47,7 +47,7 @@ class Configuration:
 
     def as_dict(self) -> dict[str, Any]:
         """Return a mutable copy suitable for callers that need one."""
-        return deepcopy(dict(self.values))
+        return _thaw(self.values)
 
 
 class ConfigurationManager:
@@ -159,6 +159,15 @@ def _parse_environment_value(value: str) -> Any:
     except json.JSONDecodeError:
         return value
 
+def _thaw(value: Any) -> Any:
+    """Convert immutable configuration values into mutable Python objects."""
+    if isinstance(value, Mapping):
+        return {key: _thaw(item) for key, item in value.items()}
+
+    if isinstance(value, tuple):
+        return [_thaw(item) for item in value]
+
+    return value
 
 def _freeze(value: Any) -> Any:
     """Recursively prevent mutation of the published configuration."""

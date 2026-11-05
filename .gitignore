@@ -28,3 +28,10 @@ Logs/
 # Native-build intermediates
 build/pyinstaller/
 *.spec
+
+# Local ORB runtime data
+temp_logs/
+workspace/
+*.db
+*.bak
+config.json

@@ -42,6 +42,21 @@ class ConfigurationManagerTests(unittest.TestCase):
         with self.assertRaisesRegex(ConfigurationError, "does not exist"):
             ConfigurationManager("does-not-exist.toml").load()
 
+    def test_as_dict_returns_independent_mutable_copy(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "orb.toml"
+            path.write_text(
+                '[ai]\nmodel = "qwen2.5:3b"\n',
+                encoding="utf-8",
+            )
+            configuration = ConfigurationManager(path).load()
+
+        values = configuration.as_dict()
+        values["ai"]["model"] = "changed-model"
+
+        self.assertEqual(configuration.get("ai.model"), "qwen2.5:3b")
+        self.assertEqual(values["ai"]["model"], "changed-model")
+
 
 if __name__ == "__main__":
     unittest.main()
