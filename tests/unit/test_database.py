@@ -11,75 +11,43 @@ from orb.storage.database import ORBDatabase
 
 
 class DatabaseTests(unittest.TestCase):
-
     def test_uses_default_data_directory(self):
         with tempfile.TemporaryDirectory() as directory:
             expected_directory = Path(directory) / "data"
-
-            with patch(
-                "orb.storage.database.DATA_DIRECTORY",
-                expected_directory
-            ):
+            with patch("orb.storage.database.DATA_DIRECTORY", expected_directory):
                 db = ORBDatabase()
-
-            self.assertEqual(
-                db.db_path,
-                expected_directory / "orb.db"
-            )
+            self.assertEqual(db.db_path, expected_directory / "orb.db")
             self.assertTrue(db.db_path.exists())
 
     def test_accepts_custom_database_path(self):
         with tempfile.TemporaryDirectory() as directory:
             custom_path = Path(directory) / "custom" / "test.db"
-
             db = ORBDatabase(custom_path)
-
             self.assertEqual(db.db_path, custom_path)
             self.assertTrue(custom_path.exists())
 
     def test_creates_missing_parent_directories(self):
         with tempfile.TemporaryDirectory() as directory:
             db_path = Path(directory) / "nested" / "folder" / "orb.db"
-
             ORBDatabase(db_path)
-
             self.assertTrue(db_path.parent.exists())
             self.assertTrue(db_path.exists())
 
     def test_saves_execution_and_workflow_steps(self):
         with tempfile.TemporaryDirectory() as directory:
             db = ORBDatabase(Path(directory) / "orb.db")
-
             steps = [
-                {
-                    "sequence": 1,
-                    "name": "Analyze goal",
-                    "action_type": "ANALYSIS",
-                    "status": "COMPLETED",
-                },
-                {
-                    "sequence": 2,
-                    "name": "Execute task",
-                    "action_type": "EXECUTION",
-                    "status": "PENDING",
-                },
+                {"sequence": 1, "name": "Analyze goal", "action_type": "ANALYSIS", "status": "COMPLETED"},
+                {"sequence": 2, "name": "Execute task", "action_type": "EXECUTION", "status": "PENDING"},
             ]
-
-            execution_id = db.save_execution(
-                goal="Build ORB",
-                status="IN_PROGRESS",
-                steps=steps,
-            )
-
+            execution_id = db.save_execution("Build ORB", "IN_PROGRESS", steps)
             self.assertGreater(execution_id, 0)
-
-            with closing(sqlite3.connect(db.db_path)) as conn:
-                execution = conn.execute(
+            with closing(sqlite3.connect(db.db_path)) as connection:
+                execution = connection.execute(
                     "SELECT goal, status FROM executions WHERE id = ?",
                     (execution_id,),
                 ).fetchone()
-
-                saved_steps = conn.execute(
+                saved_steps = connection.execute(
                     """
                     SELECT sequence, name, action_type, status
                     FROM workflow_steps
@@ -88,11 +56,7 @@ class DatabaseTests(unittest.TestCase):
                     """,
                     (execution_id,),
                 ).fetchall()
-
-            self.assertEqual(
-                execution,
-                ("Build ORB", "IN_PROGRESS")
-            )
+            self.assertEqual(execution, ("Build ORB", "IN_PROGRESS"))
             self.assertEqual(len(saved_steps), 2)
             self.assertEqual(saved_steps[0][1], "Analyze goal")
             self.assertEqual(saved_steps[1][1], "Execute task")
@@ -100,18 +64,44 @@ class DatabaseTests(unittest.TestCase):
     def test_fetches_recent_executions(self):
         with tempfile.TemporaryDirectory() as directory:
             db = ORBDatabase(Path(directory) / "orb.db")
-
             db.save_execution("Goal One", "COMPLETED", [])
             db.save_execution("Goal Two", "COMPLETED", [])
             db.save_execution("Goal Three", "FAILED", [])
-
             results = db.fetch_recent_executions(limit=2)
-
             self.assertEqual(len(results), 2)
-            self.assertEqual(
-                [item["goal"] for item in results],
-                ["Goal Three", "Goal Two"]
+            self.assertEqual([item["goal"] for item in results], ["Goal Three", "Goal Two"])
+
+    def test_persists_goals_and_updates_status(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = ORBDatabase(Path(directory) / "orb.db")
+            db.save_goal(
+                goal_id="goal-1",
+                title="Build ORB",
+                description="Implement the dashboard",
+                status="created",
+                created_at="2026-11-07T10:00:00",
+                updated_at="2026-11-07T10:00:00",
             )
+            saved = db.fetch_goal("goal-1")
+            self.assertEqual(saved["title"], "Build ORB")
+            self.assertEqual(saved["description"], "Implement the dashboard")
+            self.assertTrue(db.update_goal_status("goal-1", "planning", "2026-11-07T10:05:00"))
+            self.assertEqual(db.fetch_goal("goal-1")["status"], "planning")
+            self.assertTrue(db.delete_goal("goal-1"))
+            self.assertIsNone(db.fetch_goal("goal-1"))
+
+    def test_fetches_recent_execution_steps_with_parent_record(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = ORBDatabase(Path(directory) / "orb.db")
+            db.save_execution(
+                "Prepare dashboard",
+                "PLANNED",
+                [{"sequence": 1, "name": "Inspect UI", "action_type": "ANALYSIS", "status": "pending"}],
+            )
+            steps = db.fetch_recent_execution_steps()
+            self.assertEqual(len(steps), 1)
+            self.assertEqual(steps[0]["goal"], "Prepare dashboard")
+            self.assertEqual(steps[0]["execution_status"], "PLANNED")
 
 
 if __name__ == "__main__":
