@@ -12,6 +12,7 @@ Architecture: ORB Platform
 from __future__ import annotations
 
 import sqlite3
+import json
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterator, List
@@ -73,6 +74,17 @@ class ORBDatabase:
                         action_type TEXT,
                         status TEXT,
                         FOREIGN KEY(execution_id) REFERENCES executions(id)
+                    )
+                """)
+
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS workflow_checkpoints (
+                        run_id TEXT PRIMARY KEY,
+                        goal TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        plan_json TEXT,
+                        error TEXT,
+                        updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
 
@@ -147,3 +159,40 @@ class ORBDatabase:
         except Exception:
             logger.exception("Failed to fetch executions.")
             return []
+
+    def checkpoint(self, run_id: str, goal: str, status: str, plan=None, error=None):
+        """Commit the last observed plan state before proceeding."""
+        payload = plan.model_dump_json() if plan is not None else None
+        with self._get_connection() as conn:
+            conn.execute(
+                """INSERT INTO workflow_checkpoints (run_id, goal, status, plan_json, error)
+                   VALUES (?, ?, ?, ?, ?)
+                   ON CONFLICT(run_id) DO UPDATE SET
+                   status=excluded.status, plan_json=excluded.plan_json,
+                   error=excluded.error, updated_at=CURRENT_TIMESTAMP""",
+                (run_id, goal, status, payload, error),
+            )
+
+    def fetch_checkpoints(self, limit=20):
+        with self._get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM workflow_checkpoints ORDER BY updated_at DESC, rowid DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        records = []
+        for row in rows:
+            record = dict(row)
+            record["plan"] = json.loads(record.pop("plan_json") or "null")
+            records.append(record)
+        return records
+
+    def get_checkpoint(self, run_id):
+        with self._get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM workflow_checkpoints WHERE run_id = ?", (run_id,)
+            ).fetchone()
+        if row is None:
+            return None
+        record = dict(row)
+        record["plan"] = json.loads(record.pop("plan_json") or "null")
+        return record
