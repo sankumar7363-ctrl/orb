@@ -59,6 +59,8 @@ class WorkflowStep(BaseModel):
     # Verifier and Safety Integration
     expected_outcome: Dict[str, Any] = Field(default_factory=dict, description="Criteria for Verifier to check (e.g. file_exists)")
     verification_status: VerificationStatus = VerificationStatus.UNVERIFIED
+    execution_status: str | None = None
+    error: str | None = None
 
 
 class Plan(BaseModel):

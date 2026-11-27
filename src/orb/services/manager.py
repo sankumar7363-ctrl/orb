@@ -74,12 +74,30 @@ class ServiceManager:
 
     def start(self) -> None:
         """Start initialized services in dependency order."""
-        self.initialize()
-        for name in self._resolution_order():
-            if name not in self._started:
-                self._logger.debug("Starting service '%s'", name)
-                self._services[name].start()
-                self._started.append(name)
+        initialized_before = len(self._initialized)
+        started_before = len(self._started)
+        try:
+            self.initialize()
+            for name in self._resolution_order():
+                if name not in self._started:
+                    self._logger.debug("Starting service '%s'", name)
+                    self._services[name].start()
+                    self._started.append(name)
+        except Exception:
+            for name in reversed(self._started[started_before:]):
+                try:
+                    self._services[name].stop()
+                except Exception:
+                    self._logger.exception("Could not stop service '%s' during startup rollback", name)
+            del self._started[started_before:]
+
+            for name in reversed(self._initialized[initialized_before:]):
+                try:
+                    self._services[name].shutdown()
+                except Exception:
+                    self._logger.exception("Could not shut down service '%s' during startup rollback", name)
+            del self._initialized[initialized_before:]
+            raise
 
     def stop(self) -> None:
         """Stop started services in reverse dependency order."""

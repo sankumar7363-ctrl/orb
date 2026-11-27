@@ -18,8 +18,13 @@ from orb.plugins import PluginManager
 from orb.services import ServiceManager
 
 # Nayi services import ki gayi hain
+from orb.execution import ExecutionService
+from orb.execution.workspace import WorkspaceCopyFile, WorkspaceTextFile
+from orb.execution.applications import OpenApplication
+from orb.execution.desktop import OpenLocalFile, OpenWebsite, SearchWeb
 from orb.services.ai_service import AIService
 from orb.services.workflow_service import WorkflowService
+from orb.voice import VoiceService
 
 
 class ORBKernel:
@@ -38,19 +43,44 @@ class ORBKernel:
 
         # Nayi services initialize aur register ho rahi hain
         self.ai_service = AIService()
-        self.workflow_service = WorkflowService(self.ai_service)
+        self.workspace_file = WorkspaceTextFile()
+        self.workspace_copy = WorkspaceCopyFile(self.workspace_file.root)
+        self.open_application = OpenApplication()
+        self.capabilities = (
+            self.workspace_file, self.workspace_copy, self.open_application,
+            OpenWebsite(), SearchWeb(), OpenLocalFile(),
+        )
+        self.execution_service = ExecutionService(
+            permission_checker=self.permits_workspace_action
+        )
+        self.workflow_service = WorkflowService(
+            self.ai_service,
+            self.execution_service,
+        )
+        self.voice_service = VoiceService()
 
         self.service_manager.register("ai_service", self.ai_service)
         self.service_manager.register(
+            "execution_service",
+            self.execution_service,
+        )
+        self.service_manager.register(
             "workflow_service",
             self.workflow_service,
-            dependencies=["ai_service"]
+            dependencies=["ai_service", "execution_service"],
         )
+        self.service_manager.register("voice_service", self.voice_service)
 
     @property
     def state(self) -> str:
         """Return the current application state."""
         return self.lifecycle.state
+
+    def permits_workspace_action(self, permission, parameters):
+        return any(
+            capability.permits(permission, parameters)
+            for capability in self.capabilities
+        )
 
     def start(self) -> None:
         """
@@ -58,9 +88,17 @@ class ORBKernel:
         """
         self.configuration = self.configuration_manager.load()
         self.ai_service.configure(self.configuration.values)
+        self.voice_service.configure(self.configuration.values)
         configure_logging(self.configuration.values)
         self.logger.info("ORB kernel starting")
 
+        for capability in self.capabilities:
+            self.execution_service.register_capability(
+                capability.name,
+                capability,
+                required_permission=capability.permission,
+                requires_approval=True,
+            )
         self.service_manager.start()
         self.plugin_manager.load_all()
         self.plugin_manager.start()

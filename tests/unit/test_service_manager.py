@@ -43,6 +43,37 @@ class ServiceManagerTests(unittest.TestCase):
             ],
         )
 
+    def test_start_rolls_back_after_failure_and_can_retry(self) -> None:
+        calls: list[str] = []
+
+        class FailsOnce(FakeService):
+            fail_next_start = True
+
+            def start(self) -> None:
+                if self.fail_next_start:
+                    self.fail_next_start = False
+                    raise RuntimeError("start failed")
+                super().start()
+
+        manager = ServiceManager()
+        manager.register("workflow", FailsOnce("workflow", calls), dependencies=("ai",))
+        manager.register("ai", FakeService("ai", calls))
+
+        with self.assertRaisesRegex(RuntimeError, "start failed"):
+            manager.start()
+
+        self.assertEqual(calls, [
+            "initialize:ai", "initialize:workflow", "start:ai",
+            "stop:ai", "shutdown:workflow", "shutdown:ai",
+        ])
+
+        calls.clear()
+        manager.start()
+        self.assertEqual(calls, [
+            "initialize:ai", "initialize:workflow", "start:ai", "start:workflow",
+        ])
+        manager.shutdown()
+
     def test_start_is_idempotent(self) -> None:
         calls: list[str] = []
         manager = ServiceManager()
